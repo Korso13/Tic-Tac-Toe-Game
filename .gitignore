@@ -1,4 +1,8 @@
-HW2.vcxproj
-HW2.vcxproj.filters
-HW2.vcxproj.user
-x64
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+.gitignore
+.vs/
+x64/
+debug/
