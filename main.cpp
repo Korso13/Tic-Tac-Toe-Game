@@ -29,10 +29,6 @@ struct TTT_field
     string winner;
 };
 
-void AI_Proc(TTT_field game_data) //Обсчёт логики ИИ (?)
-{
-}
-
 void game(TTT_field &game_data) //Основная игровая логика
 {
     std::cout << std::endl;
@@ -67,7 +63,7 @@ void game(TTT_field &game_data) //Основная игровая логика
 
     if (game_data.field_size == 3) 
         game_data.fieldsmall[x][y] = (game_data.turn == game_data.p1) ? game_data.p1_f : game_data.p2_f;
-    else //stub for field size 5. Ignore for now
+    else //!!stub for custom field size!! 
         game_data.fieldmedium[x][y] = (game_data.turn == game_data.p1) ? game_data.p1_f : game_data.p2_f;
 }
 
@@ -76,68 +72,53 @@ int main()
     setlocale(LC_ALL, "Russian");
     TTT_field game_data;
     init(game_data);
-    restart:
-    game_data.winner = "0"; //Подготовка к старту новой игры со старыми установками
-    game_data.turn = game_data.p1;
-    //очистка полей
-    for (size_t i = 0; i < game_data.field_size; i++)
-    {
-        for (size_t k = 0; k < game_data.field_size; k++)
-        { 
-            game_data.fieldsmall[i][k] = EMTY;
-            game_data.fieldmedium[i][k] = EMTY;
-        }
-    }
-
     do
     {
-        game(game_data);
-        game_data.game_state = winCheck(game_data);
-        if (game_data.game_state == 2) //проверка на ничью
+        game_data.winner = "0"; //Подготовка к старту новой игры со старыми установками
+        game_data.turn = game_data.p1;
+        //очистка полей !!Переделать под динамические поля с очисткой памяти!!
+        for (size_t i = 0; i < game_data.field_size; i++)
         {
-            break;
-        }
-        else
-        {
-            if (game_data.game_state == 0) //Проверка - привёл ли очередной ход к победе
+            for (size_t k = 0; k < game_data.field_size; k++)
             {
-                if (game_data.turn == game_data.p1) //Передача хода другому игроку
-                    game_data.turn = game_data.p2;
-                else
-                    game_data.turn = game_data.p1;
+                game_data.fieldsmall[i][k] = EMTY;
+                game_data.fieldmedium[i][k] = EMTY;
             }
-            else if(game_data.game_state == 1)
-                game_data.winner = game_data.turn; //В случае выигрыша - передаём имя победителя; заканчиваем цикл
         }
-    } while (game_data.game_state == 0);
-    fieldPrint(game_data);
-    if (game_data.game_state == 2) //Объявление ничей или победителя
-    {
-        std::cout << "Ничья!" << std::endl;
-    }
-    else if (game_data.game_state == 1)
-        std::cout << "Победил игрок: " << game_data.winner << "!" << std::endl;
 
-    char y_n = 0;
-    for (;;)
-    {
-        cout << "Реванш (Y/N)? ";
-        cin >> y_n;
-        if (y_n == 'Y' || y_n == 'y' || y_n == 'У' || y_n == 'у')
+        do
         {
-            cout << endl;
-            goto restart;
-                
+            game(game_data);
+            game_data.game_state = winCheck(game_data);
+            if (game_data.game_state == 2) //проверка на ничью
+            {
+                break;
+            }
+            else
+            {
+                if (game_data.game_state == 0) //Проверка - привёл ли очередной ход к победе
+                {
+                    if (game_data.turn == game_data.p1) //Передача хода другому игроку
+                        game_data.turn = game_data.p2;
+                    else
+                        game_data.turn = game_data.p1;
+                }
+                else if (game_data.game_state == 1)
+                    game_data.winner = game_data.turn; //В случае выигрыша - передаём имя победителя; заканчиваем цикл
+            }
+        } while (game_data.game_state == 0);
+        fieldPrint(game_data);
+        if (game_data.game_state == 2) //Объявление ничей или победителя
+        {
+            std::cout << "Ничья!" << std::endl;
+        }
+        else if (game_data.game_state == 1) //!! добавить проверку на ИИ
+            std::cout << "Победил игрок: " << game_data.winner << "!" << std::endl;
 
-        }
-        else if (y_n == 'N' || y_n == 'n' || y_n == 'Н' || y_n == 'н')
-        {
-            cout << endl;
-            break;
-        }
-    }
+      
+    } while (ReMatch() != 1);//Предложение реванша
     
-    //Debugging
+    //Debugging - to be deleted
     cout << "game_mode " << game_data.game_mode << endl;
     cout << "difficulty " << game_data.diff << endl;
     cout << "field_size " << game_data.field_size << endl;
@@ -145,7 +126,6 @@ int main()
     cout << "p2 name " << game_data.p2 << endl;
     cout << "p1 figure " << game_data.p1_f << endl;
     cout << "p2 figure " << game_data.p2_f << endl;
-
     fieldPrint(game_data);
     return 0;
 }
