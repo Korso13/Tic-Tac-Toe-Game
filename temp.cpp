@@ -53,7 +53,21 @@ void AI_Proc(TTT_field & game_data)
   } //end of diff > 1 checks for imminent victory
   if (game_data.diff == 1)
   {
-    
+    int x = rollRandom(0, &game_data.fieldSize);
+    int y = rollRandom(0, &game_data.fieldSize);
+    for(;;)
+    {
+      if (game_data.field[y][x] != EMTY)
+      {
+        game_data.field[y][x] = game_data.turn;
+        return; //единственный выход из цикла. Сделать запасной после fieldSize^2 итераций? 
+      }
+      else
+      {
+        x = rollRandom(0, &game_data.fieldSize);
+        y = rollRandom(0, &game_data.fieldSize);
+      }
+    }//конец кода для сложности 1. Больше кода для неё не будет
   }//end of primary ai_checks. On to begining and mitschpiel checks!
   
 }
