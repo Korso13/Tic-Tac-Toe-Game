@@ -54,7 +54,7 @@ void AI_Proc(TTT_field & game_data)
   } //end of diff > 1 checks for imminent victory
   if (game_data.diff == 1) //all easy-mode mechanics here!!
   {
-    int x = rollRandom(0, &game_data.fieldSize);
+    int x = rollRandom(0, &game_data.fieldSize); //DO as SEPARATE function !!!
     int y = rollRandom(0, &game_data.fieldSize);
     for(;;)
     {
@@ -126,5 +126,32 @@ void AI_Proc(TTT_field & game_data)
  
 
   //All that remains are mittelspiel AI scripts (one figure in potential row)      
-  
+   if (game_data.diff > 1) 
+      {
+       for (int y = 0; y < (game_data.fieldsize - game_data.VictoryRowSize + 1); y++)
+        for (int x = 0; x < (game_data.fieldsize - game_data.VictoryRowSize + 1); x++)
+         if (rowsCheck(game_data, y, x) == 1) //prototype return!!! Replace with actual once the function is written!!! (0 - no victory variants found, 1 - victory variant found, 2 - victory found)
+         {
+          game_data.fieldsmall[ai_coord.y][ai_coord.x] = game_data.turn; //ai_coord - global variable custom structure "coord" - to be added!!!!. 
+          return;
+         }
+      }
+    else
+      { //Redundancy. Do a separate function!!!!
+       int x = rollRandom(0, &game_data.fieldSize);
+       int y = rollRandom(0, &game_data.fieldSize);
+       for(;;)
+       {
+         if (game_data.fieldsmall[y][x] != EMTY)
+         {
+           game_data.fieldsmall[y][x] = game_data.turn;
+           return; //only exit from the cycle. Make redundancy break after fieldSize^2 iterations?? 
+         }
+         else
+         {
+           x = rollRandom(0, &game_data.fieldSize);
+           y = rollRandom(0, &game_data.fieldSize);
+      }
 }
+
+int rowsCheck()
