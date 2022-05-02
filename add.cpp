@@ -5,23 +5,24 @@
 #include <chrono>
 
 using namespace std;
+
 //==================================================================================================
 //Enums and Structures
 //==================================================================================================
 enum TTT : char { X = 'X', O = 'O', EMTY = '·' };
 enum analysis_flag { VOID, NO_ROW, VICTORY_ROW, PRIORITY};
 
+//Main structure for keeping game data
 struct TTT_field
 {
-    short int game_mode; // 0 - pvp, 1 - AI
+    short int game_mode = 1; // 0 - pvp, 1 - AI
     short int diff = 0;
     short int field_size = 3;
-    TTT fieldsmall[3][3] = { {EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY} };
-    TTT fieldmedium[5][5] = { {EMTY,EMTY,EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY,EMTY,EMTY}, {EMTY,EMTY,EMTY,EMTY,EMTY}, {EMTY,EMTY,EMTY,EMTY,EMTY} };
+    TTT** field = nullptr;
     string p1 = ""; //Имена игроков
     string p2 = "";
-    TTT p1_f; //Чем играет первый игрок?
-    TTT p2_f;
+    TTT p1_f = X; //Чем играет первый игрок?
+    TTT p2_f = O;
     short int VictoryRowSize = 3;
     int game_state = 0;
     string turn; //Чей ход
@@ -41,10 +42,10 @@ struct RowDataBuffer
     short int buff2[5]{ 0 };
     short int buff3[5]{ 0 };
     short int buff4[5]{ 0 };
-    analysis_flag buff1_flag = VOID;
-    analysis_flag buff2_flag = VOID;
-    analysis_flag buff3_flag = VOID;
-    analysis_flag buff4_flag = VOID;
+    analysis_flag buff1_flag;
+    analysis_flag buff2_flag;
+    analysis_flag buff3_flag;
+    analysis_flag buff4_flag;
 };
 
 //==================================================================================================
@@ -60,6 +61,7 @@ void cinCheck() //проверка ввода общая
     }
 }
 
+//clear screen
 void clear() // функция очистки экрана
 {
     cout << "\x1B[2J\x1B[H"; 
@@ -73,23 +75,33 @@ int32_t RollRandom(int32_t min, int32_t max) //Генератор случайных чисел от мин 
     return dis(generator);
 }
 
+//Get random coordinates
 coord getRandomCoord(short int f_size)
 {
     coord c;
-    c.x = RollRandom(0, f_size);
-    c.y = RollRandom(0, f_size);
+    c.x = RollRandom(0, (f_size - 1));
+    c.y = RollRandom(0, (f_size - 1));
     return c;
+}
+
+//Roll for initiative!!
+void rollInitiative(TTT_field& game_data)
+{
+    if (RollRandom(0, 100) >= 50)
+        game_data.turn = game_data.p2;
+    else
+        game_data.turn = game_data.p1;
 }
 
 //===================================================================================================
 //Инициализация игры. Вввод исходных данных. 
 //===================================================================================================
 
-void init(TTT_field &game_data)
+void init(TTT_field& game_data)
 {
     // TTT_field game_data - Основной блок данных игры. Заполняем то что нужно на старте.
     cout << "Добро пожаловать в игру 'крестики-нолики'!" << endl;
-    string gm;
+    string gm; //Temp variable to interpret user input
 
 login:  //Точка входа если данные введены неправильно
     game_data.game_mode = 2;
@@ -114,7 +126,7 @@ login:  //Точка входа если данные введены неправильно
         game_data.diff = 0;  //Защита от проскальзывания при перезапуске init
         while (game_data.diff < 1 || game_data.diff > 4)
         {
-            cout << "Выберите сложность. 1 - простая, 2 - средняя, 3 - сложная, 4 - Hurt Me Plenty: ";
+            cout << "Выберите сложность. 1 - простая, 2 - средняя, 3 - сложная, 4 - Hurt Me Plenty (на кастомных полях и условиях): ";
             cin >> game_data.diff;
             cinCheck();
             cout << endl;
@@ -152,7 +164,7 @@ login:  //Точка входа если данные введены неправильно
     } //конец настройки сложности ИИ
 
 //Настройка игроков (pvp mode)
-    else
+    else if (game_data.game_mode == 0)
     {
         char temp2;
         game_data.p1 = ""; //Защита на случай перезапуска init
@@ -196,27 +208,38 @@ login:  //Точка входа если данные введены неправильно
     cout << endl;
 
     
-    //Настройка размера игрового поля. 
-    if (game_data.game_mode == 1 && game_data.diff == 4)
-        game_data.field_size = 5;
-    else
+    //Setting up game field size and victory requirements
+    if ((game_data.game_mode == 1 && game_data.diff == 4) || game_data.game_mode == 0)
     {
-        for (;;)
-        {   //!!! Попробовать сделать динамический размер поля или выпилить этот раздер вовсе !!!
-            cout << "Выберите размер игрового поля (3, 5): "; 
+        for (;;) //game field size
+        {
+            cout << "Выберите размер игрового поля (от 3 и больше): ";
             cin >> game_data.field_size;
             cinCheck();
-            if (game_data.field_size == 3 || game_data.field_size == 5)
+            if (game_data.field_size > 3)
                 break;
             else
             {
                 cout << "Некорректный ввод!" << endl;
             }
         }
+        
+        for (;;) //victory requirements
+        {
+            cout << "Сколько нужно собрать Х/О в ряд для победы (не меньше трех, но не больше размера поля): ";
+            cin >> game_data.VictoryRowSize;
+            cinCheck();
+            if ((game_data.VictoryRowSize >= 3) && (game_data.VictoryRowSize <= game_data.field_size))
+                break;
+            else
+            {
+                cout << "Некорректный ввод!" << endl;
+            }
+        }  
     }
-    //==============================================================================
-    //Add roll for initiative!!
 
+    //Roll for initiative!!
+    rollInitiative(game_data);
 
     //Последние приготовления
     char y_n = 0;
@@ -240,157 +263,94 @@ login:  //Точка входа если данные введены неправильно
 }
 
 //=================================================================================================
-//Печать стандартного игрового поля
+//initializing dynamic game field
+//=================================================================================================
+
+void fieldInit(TTT_field& game_data)
+{
+    game_data.field = new (std::nothrow) TTT * [game_data.field_size];
+    for (size_t i = 0; i < game_data.field_size; i++)
+    {
+        game_data.field[i] = new (std::nothrow) TTT [game_data.field_size];
+    }
+    for (size_t y = 0; y < game_data.field_size; y++)
+    {
+        for (size_t x = 0; x < game_data.field_size; x++)
+        {
+            game_data.field[y][x] = EMTY;
+        }
+    }
+}
+
+//=================================================================================================
+//Печать игрового поля
 //=================================================================================================
 
 void fieldPrint(TTT_field& game_data)
 {
-    //Вывод поля 3х3
-    if (game_data.field_size == 3)
+    cout << "  ";
+    for (size_t i = 1; i <= game_data.field_size; i++) //print x coords
     {
-        std::cout << "  " << "1 " << "2 " << "3 " << std::endl;
-        for (int i1 = 0; i1 < 3; i1++)
-        {
-            std::cout << (i1 + 1) << " ";
-            for (int i2 = 0; i2 < 3; i2++)
-            {
-                std::cout << game_data.fieldsmall[i1][i2] << " ";
-            }
-            std::cout << std::endl;
-        }
+        cout << "| " << i << " ";
     }
-    else
-        //!!! Вывод кастомного поля !!!
+    cout << endl;
+
+    for (int i = 0; i < game_data.field_size; i++)//print rest of field
     {
-        for (int i1 = 0; i1 < 5; i1++)
+        for (size_t j = 0; j <= game_data.field_size; j++) //print separator ahead of new line
         {
-            for (int i2 = 0; i2 < 5; i2++)
-            {
-                std::cout << game_data.fieldmedium[i1][i2] << " ";
-            }
-            std::cout << std::endl;
+            cout << "----";
         }
+        cout << endl;
+
+        cout << (i + 1) << " ";  //print y coords
+        for (int k = 0; k < game_data.field_size; k++) //print i line
+        {
+            cout << "| " << game_data.field[i][k] << " ";
+        }
+        cout << endl;
     }
 }
 
 
-coord rowsCheck(TTT_field& game_data, int y, int x); //protptype for use in below functions
+coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck = false); //protptype for use in below functions
 
 //==================================================================================================
-//Проверка выполнения условий выигрыша.
+//Victory and Draw checks function 
+//Returns 0 if game continues, 1 - if victory happened with last turn, 2 - if it's draw
 //==================================================================================================
-int winCheck(TTT_field game_data) //0 - игра продолжается, 1 - произошла победа, 2 - ничья
+
+int winCheck(TTT_field game_data)
 {
-    size_t draw_count = 0; //Если = 8 >> return 2;
-    size_t countO, countX, count_0;
-
-    for (size_t i = 0; i < game_data.field_size; i++) //проверка по строкам
+    coord checkRes;
+    int drawRows = 0;
+    for (int y = 0; y < game_data.field_size; y++)
     {
-        countO = 0;
-        countX = 0;
-        count_0 = 0;
-        for (size_t k = 0; k < game_data.field_size; k++) //считаем значения в строке
+        for (int x = 0; x < game_data.field_size; x++)
         {
-            switch(game_data.fieldsmall[i][k])
+            checkRes = rowsCheck(game_data, y, x, true);
+            if (checkRes.flag == 2) //checks if victory row was found
             {
-                case 'X':
-                    countX++;
-                    break;
-                case 'O':
-                    countO++;
-                    break;
-                case 'EMTY':
-                    count_0++;
-                    break;
+                return 1;
+            }
+            if (checkRes.flag == 0) //checks if no valid moves were found for this cell
+            {
+                drawRows++;
             }
         }
-        if (countX == 3 || countO == 3)
-            return 1;
-        else if (countX > 0 && countO > 0)
-            draw_count++;
     }
 
-    for (size_t k = 0; k < game_data.field_size; k++) //проверка по столбцам
+    //Check if draws found in every scenario
+    if (drawRows == (game_data.field_size * game_data.field_size))
     {
-        countO = 0;
-        countX = 0;
-        count_0 = 0;
-        for (size_t i = 0; i < game_data.field_size; i++) //считаем значения в столбце
-        {
-            switch (game_data.fieldsmall[i][k])
-            {
-            case 'X':
-                countX++;
-                break;
-            case 'O':
-                countO++;
-                break;
-            case 'EMTY':
-                count_0++;
-                break;
-            }
-        }
-        if (countX == 3 || countO == 3)
-            return 1;
-        else if (countX > 0 && countO > 0)
-            draw_count++;
+        return 2;
     }
-
-    countO = 0; //проверка по диагонали 1
-    countX = 0;
-    count_0 = 0;
-    for (size_t i = 0; i < game_data.field_size; i++) 
-    {
-            switch (game_data.fieldsmall[i][i])
-            {
-            case 'X':
-                countX++;
-                break;
-            case 'O':
-                countO++;
-                break;
-            case 'EMTY':
-                count_0++;
-                break;
-            }
-    }
-    if (countX == 3 || countO == 3)
-        return 1;
-    else if (countX > 0 && countO > 0)
-        draw_count++;
-
-    countO = 0; //проверка по диагонали 2
-    countX = 0;
-    count_0 = 0;
-    for (size_t i = 0; i < game_data.field_size; i++)
-    {
-        switch (game_data.fieldsmall[i][(game_data.field_size - 1) - i]) //подсчёт значений по диагонали из правого верхнего угла
-        {
-        case 'X':
-            countX++;
-            break;
-        case 'O':
-            countO++;
-            break;
-        case 'EMTY':
-            count_0++;
-            break;
-        }
-    }
-    if (countX == 3 || countO == 3)
-        return 1;
-    else if (countX > 0 && countO > 0)
-        draw_count++;
-
-    //проверка на ничью (может срабатывать раньше чем закончатся клетки в 3х3), выход из функции
-    if (draw_count == 8)
-        return 2; //ничья
     else
-        return 0; //игра продолжается
+        return 0;
 }
 
 //==================================================================================================
-//AI Logic
+//AI Logic. Makes move, doesn't return anything
 //==================================================================================================
 
 void AI_Proc(TTT_field& game_data)
@@ -401,20 +361,20 @@ void AI_Proc(TTT_field& game_data)
     {
         for (size_t i = 0; i < game_data.field_size; i++)
             for (size_t k = 0; k < game_data.field_size; k++)
-                if (game_data.fieldsmall[i][k] == EMTY)
+                if (game_data.field[i][k] == EMTY)
                 {
                     if (game_data.diff == 2) //Normal. Chance to complete row 85%. Chance to react to threat 25% (75% if it completes own row). 
                     {
-                        game_data.fieldsmall[i][k] = game_data.p2_f; //AI figure placement
+                        game_data.field[i][k] = game_data.p2_f; //AI figure placement
                         if (winCheck(game_data) == 1)
                         {
                             if (RollRandom(0, 100) >= 15)
                                 return;
                             else //75% chance to respond to threat and complete own row
                             {
-                                game_data.fieldsmall[i][k] = game_data.p1_f;
+                                game_data.field[i][k] = game_data.p1_f;
                                 ai_temp1 = winCheck(game_data);
-                                game_data.fieldsmall[i][k] = game_data.p2_f;
+                                game_data.field[i][k] = game_data.p2_f;
                                     if (ai_temp1 == 1 && RollRandom(0, 100) >= 25)
                                         return;
                             }
@@ -424,28 +384,28 @@ void AI_Proc(TTT_field& game_data)
                         else //nothing proc'ed
                         {
                             break;
-                            game_data.fieldsmall[i][k] = EMTY;
+                            game_data.field[i][k] = EMTY;
                         }
                     } //End of bloc for normal difficulty
                     else if (game_data.diff >= 3)
                     {
-                        game_data.fieldsmall[i][k] = game_data.p2_f;
+                        game_data.field[i][k] = game_data.p2_f;
                         if (winCheck(game_data) == 1)
                         {
                             return;
                         } //end of imminent victory check
                         else
                         {
-                            game_data.fieldsmall[i][k] = game_data.p1_f;
+                            game_data.field[i][k] = game_data.p1_f;
                             ai_temp1 = winCheck(game_data);
-                            game_data.fieldsmall[i][k] = game_data.p2_f;
+                            game_data.field[i][k] = game_data.p2_f;
                                 if (ai_temp1 == 1)
                                 {
                                     return;
                                 } //end of imminent player victory check
                                 else
                                 {
-                                    game_data.fieldsmall[i][k] = EMTY;
+                                    game_data.field[i][k] = EMTY;
                                 } //end of top difficulty checks for imminent victory
                         }
                     }
@@ -459,10 +419,10 @@ void AI_Proc(TTT_field& game_data)
         for (;;)
         {
             short int itr = 0;
-            if (game_data.fieldsmall[ai_c.y][ai_c.x] == EMTY)
+            if (game_data.field[ai_c.y][ai_c.x] == EMTY)
             {
-                game_data.fieldsmall[ai_c.y][ai_c.x] = game_data.p2_f;
-                return; //redundancy break after too many iterations
+                game_data.field[ai_c.y][ai_c.x] = game_data.p2_f;
+                return;
             }
             else
             {
@@ -471,6 +431,9 @@ void AI_Proc(TTT_field& game_data)
             }
             if (itr > (game_data.field_size * game_data.field_size * 4))
             {
+                cout << "ИИ Сдаётся!" << endl;
+                game_data.turn = game_data.p1;
+                game_data.game_state = 1;
                 return; //redundancy break after too many iterations
             }
         }
@@ -480,56 +443,56 @@ void AI_Proc(TTT_field& game_data)
     if (game_data.field_size == 3)
     {
         //Check if central cell in 3x3 field is empty
-        if ((game_data.diff == 3 || (game_data.diff == 2 && (RollRandom(0, 100) >= 50))) && game_data.fieldsmall[1][1] == EMTY)
+        if ((game_data.diff == 3 || (game_data.diff == 2 && (RollRandom(0, 100) >= 50))) && game_data.field[1][1] == EMTY)
         {
-            game_data.fieldsmall[1][1] = game_data.p2_f;
+            game_data.field[1][1] = game_data.p2_f;
             return;
         }
         //hard diff checks if centrall cell occupied
-        else if (game_data.diff == 3 && game_data.fieldsmall[1][1] != EMTY)
+        else if (game_data.diff == 3 && game_data.field[1][1] != EMTY)
         {
-            if (game_data.fieldsmall[0][2] == EMTY)
+            if (game_data.field[0][2] == EMTY)
             {
-                game_data.fieldsmall[0][2] = game_data.p2_f;
+                game_data.field[0][2] = game_data.p2_f;
                 return;
             }
-            else if (game_data.fieldsmall[2][2] == EMTY)
+            else if (game_data.field[2][2] == EMTY)
             {
-                game_data.fieldsmall[2][2] = game_data.p2_f;
+                game_data.field[2][2] = game_data.p2_f;
                 return;
             }
-            else if (game_data.fieldsmall[2][0] == EMTY)
+            else if (game_data.field[2][0] == EMTY)
             {
-                game_data.fieldsmall[2][0] = game_data.p2_f;
+                game_data.field[2][0] = game_data.p2_f;
                 return;
             }
-            else if (game_data.fieldsmall[0][0] == EMTY)
+            else if (game_data.field[0][0] == EMTY)
             {
-                game_data.fieldsmall[0][0] = game_data.p2_f;
+                game_data.field[0][0] = game_data.p2_f;
                 return;
             }
         } //end of hard diff begining checks and scripts
          //normal diff checks if centrall cell occupied or chances didn't proc
         else if (game_data.diff == 2)
         {
-            if (game_data.fieldsmall[2][1] == EMTY)
+            if (game_data.field[2][1] == EMTY)
             {
-                game_data.fieldsmall[2][1] = game_data.p2_f;
+                game_data.field[2][1] = game_data.p2_f;
                 return;
             }
-            else if (game_data.fieldsmall[1][2] == EMTY)
+            else if (game_data.field[1][2] == EMTY)
             {
-                game_data.fieldsmall[1][2] = game_data.p2_f;
+                game_data.field[1][2] = game_data.p2_f;
                 return;
             }
-            else if (game_data.fieldsmall[0][1] == EMTY)
+            else if (game_data.field[0][1] == EMTY)
             {
-                game_data.fieldsmall[0][1] = game_data.p2_f;
+                game_data.field[0][1] = game_data.p2_f;
                 return;
             }
-            else if (game_data.fieldsmall[1][0] == EMTY)
+            else if (game_data.field[1][0] == EMTY)
             {
-                game_data.fieldsmall[1][0] = game_data.p2_f;
+                game_data.field[1][0] = game_data.p2_f;
                 return;
             }
         }//end of normal diff begining checks and scripts 
@@ -539,37 +502,39 @@ void AI_Proc(TTT_field& game_data)
   //Mittelspiel AI scripts (one figure in potential row), begining script for field_size >3 and backup move script. Always return!    
     if (game_data.diff > 1)
     {
+        coord ai_c;
         for (int y = 0; y < game_data.field_size; y++)
+        {
             for (int x = 0; x < game_data.field_size; x++)
             {
-                if (game_data.fieldsmall[y][x] == game_data.p2_f) //if AI figure, check if there are any good moves using this cell
+                if (game_data.field[y][x] == game_data.p2_f || game_data.field[y][x] == EMTY) //if AI figure, check if there are any good moves using this cell
                 {
-                    coord ai_c = rowsCheck(game_data, y, x);
+                    ai_c = rowsCheck(game_data, y, x);
                     if (ai_c.flag == 1) //(0 - good moves found, 1 - good move found)
                     {
-                        game_data.fieldsmall[ai_c.y][ai_c.x] = game_data.p2_f;
-                        return;
+                        if (game_data.field[ai_c.y][ai_c.x] == EMTY)
+                        {
+                            game_data.field[ai_c.y][ai_c.x] = game_data.p2_f;
+                            return;
+                        }
                     }
                 }
             }
+        }
     }
+    
     //backup scenario - works when no optimal moves found or in begining of the game on fields > 3
-    else 
-    { 
-        coord ai_c = getRandomCoord(game_data.field_size);
-        for (;;)
+    coord ai_c = getRandomCoord(game_data.field_size);
+    for (;;)
+    {
+        if (game_data.field[ai_c.y][ai_c.x] == EMTY)
         {
-            if (game_data.fieldsmall[ai_c.y][ai_c.x] != EMTY)
-            {
-                game_data.fieldsmall[ai_c.y][ai_c.x] = game_data.p2_f;
-                return; 
-            }
-            else
-            {
-                ai_c = getRandomCoord(game_data.field_size);
-            }
-            if (winCheck(game_data) == 2)
-                return; //redundancy draw check
+            game_data.field[ai_c.y][ai_c.x] = game_data.p2_f;
+            return; 
+        }
+        else
+        {
+            ai_c = getRandomCoord(game_data.field_size);
         }
     }
 }
@@ -582,20 +547,22 @@ void AI_Proc(TTT_field& game_data)
 // Returns coords for optimal move + flag 1 (0 - if no optimal moves found). Returns flag 2 if victory found
 //======================================================================================================================
 
-coord rowsCheck(TTT_field& game_data, int y, int x)
+coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
 {
     coord c;
     //Buffers for scan results. 0 index - EMTY cells, 1st - 1p_f cells, 2nd - 2p_f cells, 
     //3rd - 'y' of best move, 4th - 'x' of best move 
     RowDataBuffer rb;
+    int k; //variable for simultaneous double loops!
 
     //First we scan potential victory rows for data (EMTY cells, 1p_f cells, 2p_f cells)
+    
     //left to right options check (buff1)
     if ((x + game_data.VictoryRowSize) <= game_data.field_size) //don't check if cells nessesary for victory exceed game field's limits
     {
-        for (int i = (x); i < (x + game_data.VictoryRowSize); i++) //loop limited by victoryRowSize 
+        for (int i = x; i < (x + game_data.VictoryRowSize); i++) //loop limited by victoryRowSize 
         {
-            switch(game_data.fieldmedium[y][i])
+            switch(game_data.field[y][i])
             {
             case 'X':
             {
@@ -626,7 +593,7 @@ coord rowsCheck(TTT_field& game_data, int y, int x)
     {
         for (int i = (y); i < (y + game_data.VictoryRowSize); i++) //loop limited by victoryRowSize 
         {
-            switch (game_data.fieldmedium[i][x])
+            switch (game_data.field[i][x])
             {
             case 'X':
             {
@@ -655,72 +622,74 @@ coord rowsCheck(TTT_field& game_data, int y, int x)
     //diagonal top-down-right options check (buff3)
     if (((y + game_data.VictoryRowSize) <= game_data.field_size) && ((x + game_data.VictoryRowSize) <= game_data.field_size)) //don't check if cells nessesary for victory exceed game field's limits
     {
+        k = x; //variable for simultaneous double loops!
         for (int i = (y); i < (y + game_data.VictoryRowSize); i++) //loop limited by victoryRowSize
-            for (int k = (x); k < (x + game_data.VictoryRowSize); k++) //loop limited by victoryRowSize 
+        {
+            switch (game_data.field[i][k++])
             {
-                switch (game_data.fieldmedium[i][k])
-                {
-                case 'X':
-                {
-                    if (game_data.p1_f == 'X')
-                        rb.buff3[1]++;
-                    else
-                        rb.buff3[2]++;
-                }
-                case 'O':
-                {
-                    if (game_data.p1_f == 'O')
-                        rb.buff3[1]++;
-                    else
-                        rb.buff3[2]++;
-                }
-                case '·':
-                {
-                    rb.buff3[0]++;
-                    rb.buff3[3] = i; //if row is completable - will be used as next move coords for AI
-                    rb.buff3[4] = k;
-                }
-                }
+            case 'X':
+            {
+                if (game_data.p1_f == 'X')
+                    rb.buff3[1]++;
+                else
+                    rb.buff3[2]++;
             }
+            case 'O':
+            {
+                if (game_data.p1_f == 'O')
+                    rb.buff3[1]++;
+                else
+                    rb.buff3[2]++;
+            }
+            case '·':
+            {
+                rb.buff3[0]++;
+                rb.buff3[3] = i; //if row is completable - will be used as next move coords for AI
+                rb.buff3[4] = k;
+            }
+            }
+        }
     }
 
     //diagonal top-down-left options check (buff4)
     if (((y + game_data.VictoryRowSize) <= game_data.field_size) && ((x - game_data.VictoryRowSize) >= 0)) //don't check if cells nessesary for victory exceed game field's limits
     {
+        k = x;
         for (int i = y; i < (y + game_data.VictoryRowSize); i++) //loop limited by victoryRowSize
-            for (int k = x; k > (x - game_data.VictoryRowSize); k--) //loop limited by victoryRowSize 
+        {
+            switch (game_data.field[i][k--])
             {
-                switch (game_data.fieldmedium[i][k])
-                {
-                case 'X':
-                {
-                    if (game_data.p1_f == 'X')
-                        rb.buff4[1]++;
-                    else
-                        rb.buff4[2]++;
-                }
-                case 'O':
-                {
-                    if (game_data.p1_f == 'O')
-                        rb.buff4[1]++;
-                    else
-                        rb.buff4[2]++;
-                }
-                case '·':
-                {
-                    rb.buff4[0]++;
-                    rb.buff4[3] = i; //if row is completable - will be used as next move coords for AI
-                    rb.buff4[4] = k;
-                }
-                }
+            case 'X':
+            {
+                if (game_data.p1_f == 'X')
+                    rb.buff4[1]++;
+                else
+                    rb.buff4[2]++;
             }
+            case 'O':
+            {
+                if (game_data.p1_f == 'O')
+                    rb.buff4[1]++;
+                else
+                    rb.buff4[2]++;
+            }
+            case '·':
+            {
+                rb.buff4[0]++;
+                rb.buff4[3] = i; //if row is completable - will be used as next move coords for AI
+                rb.buff4[4] = k;
+            }
+            }
+        }
     }
 
     
     //Checking buffers for victory rows (for winCheck) and incompletable rows. 
     //If victory found or all rows ineligable - this code will always return from function!
     {
-        if ((rb.buff1[0] == rb.buff1[1] == rb.buff1[2] == 0) || (rb.buff1[1] > 0 && rb.buff1[2] > 0)) //row didn't have enough cells or row had both player's figures
+        if (rb.buff1[0] == 0 && rb.buff1[1] == 0 && rb.buff1[2] == 0)// row didn't have enough cells
+            rb.buff1_flag = NO_ROW;
+        if (rb.buff1[1] > 0 && rb.buff1[2] > 0) // row had both player's figures
             rb.buff1_flag = NO_ROW;
         else if (rb.buff1[1] == game_data.VictoryRowSize || rb.buff1[2] == game_data.VictoryRowSize)
         {
@@ -729,7 +698,9 @@ coord rowsCheck(TTT_field& game_data, int y, int x)
             return c;
         }
 
-        if ((rb.buff2[0] == rb.buff2[1] == rb.buff2[2] == 0) || (rb.buff2[1] > 0 && rb.buff2[2] > 0))
+        if (rb.buff2[0] == 0 && rb.buff2[1] == 0 && rb.buff2[2] == 0)// row didn't have enough cells
+            rb.buff2_flag = NO_ROW;
+        if (rb.buff2[1] > 0 && rb.buff2[2] > 0) // row had both player's figures
             rb.buff2_flag = NO_ROW;
         else if (rb.buff2[1] == game_data.VictoryRowSize || rb.buff2[2] == game_data.VictoryRowSize)
         {
@@ -738,7 +709,9 @@ coord rowsCheck(TTT_field& game_data, int y, int x)
             return c;
         }
 
-        if ((rb.buff3[0] == rb.buff3[1] == rb.buff3[2] == 0) || (rb.buff3[1] > 0 && rb.buff3[2] > 0))
+        if (rb.buff3[0] == 0 && rb.buff3[1] == 0 && rb.buff3[2] == 0)// row didn't have enough cells
+            rb.buff3_flag = NO_ROW;
+        if (rb.buff3[1] > 0 && rb.buff3[2] > 0) // row had both player's figures
             rb.buff3_flag = NO_ROW;
         else if (rb.buff3[1] == game_data.VictoryRowSize || rb.buff3[2] == game_data.VictoryRowSize)
         {
@@ -747,7 +720,9 @@ coord rowsCheck(TTT_field& game_data, int y, int x)
             return c;
         }
 
-        if ((rb.buff4[0] == rb.buff4[1] == rb.buff4[2] == 0) || (rb.buff4[1] > 0 && rb.buff4[2] > 0))
+        if (rb.buff4[0] == 0 && rb.buff4[1] == 0 && rb.buff4[2] == 0)// row didn't have enough cells
+            rb.buff4_flag = NO_ROW;
+        if (rb.buff4[1] > 0 && rb.buff4[2] > 0) // row had both player's figures
             rb.buff4_flag = NO_ROW;
         else if (rb.buff4[1] == game_data.VictoryRowSize || rb.buff4[2] == game_data.VictoryRowSize)
         {
@@ -755,74 +730,82 @@ coord rowsCheck(TTT_field& game_data, int y, int x)
             c.flag = 2;
             return c;
         }
-       
-        if (rb.buff1_flag == rb.buff2_flag == rb.buff3_flag == rb.buff4_flag == NO_ROW)
+        
+
+        if (rb.buff1_flag == NO_ROW && rb.buff2_flag == NO_ROW && rb.buff3_flag == NO_ROW && rb.buff4_flag == NO_ROW)
         {
-            c.flag = 0; //no victory, good or eligible move found
+            c.flag = 0; //only draws found in checked rows (and ineligible rows)
             return c;
         }
     }
     
     //Find buffer with least buffX[0] (EMTY) - it will be closest row to complete. Rows with p1_f already excluded at this point
     //This code will always return from function!
-    {
+    if (game_data.game_mode == 1 && (game_data.turn == game_data.p2) && winCheck == false)//clause for AI turn only
+    { 
         short int min = game_data.VictoryRowSize; //variable to determine lowest amount of buffX[0]
-        if (rb.buff1[0] < min)
+        if ((rb.buff1_flag != NO_ROW) && rb.buff1[0] < min)
         {
             min = rb.buff1[0];
             rb.buff1_flag = PRIORITY;
         }
 
-        if (rb.buff2[0] < min)
+        if ((rb.buff2_flag != NO_ROW) && rb.buff2[0] < min)
         {
             min = rb.buff2[0];
             rb.buff2_flag = PRIORITY;
         }
 
-        if (rb.buff3[0] < min)
+        if ((rb.buff3_flag != NO_ROW) && rb.buff3[0] < min)
         {
             min = rb.buff3[0];
             rb.buff3_flag = PRIORITY;
         }
 
-        if (rb.buff4[0] < min)
+        if ((rb.buff4_flag != NO_ROW) && rb.buff4[0] < min)
         {
             min = rb.buff4[0];
             rb.buff4_flag = PRIORITY;
         }
         
         //Now we determine which row (buff) had least empty cells and return its 'best' coords from function
-        if (rb.buff1_flag == PRIORITY)
+        if ((rb.buff1_flag != NO_ROW) && rb.buff1_flag == PRIORITY)
         {
             c.y = rb.buff1[3];
             c.x = rb.buff1[4];
             c.flag = 1;
-            return;
+            return c;
         }
 
-        else if (rb.buff2_flag == PRIORITY)
+        else if ((rb.buff2_flag != NO_ROW) && rb.buff2_flag == PRIORITY)
         {
             c.y = rb.buff2[3];
             c.x = rb.buff2[4];
             c.flag = 1;
-            return;
+            return c;
         }
 
-        else if (rb.buff3_flag == PRIORITY)
+        else if ((rb.buff3_flag != NO_ROW) && rb.buff3_flag == PRIORITY)
         {
             c.y = rb.buff3[3];
             c.x = rb.buff3[4];
             c.flag = 1;
-            return;
+            return c;
         }
 
-        else if (rb.buff4_flag == PRIORITY)
+        else if ((rb.buff4_flag != NO_ROW) && rb.buff4_flag == PRIORITY)
         {
             c.y = rb.buff4[3];
             c.x = rb.buff4[4];
             c.flag = 1;
-            return;
+            return c;
         }
+        return c = { 0,0,0 };
+    }
+    else if (winCheck == true)
+    {
+        c.flag = 4;
+        return c;
     }
 }
 
