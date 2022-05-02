@@ -1,8 +1,19 @@
 ﻿/*
 =========================================================================================================
 Tic Tac Toe Game by Tim Corso
-First real gaming piece in C++ for me (hopefully not the last)
+The first real gaming piece in C++ for me (hopefully not the last)
 =========================================================================================================
+*/
+
+/*
+toDo list:
+1) Modify TTT_field and game() to create dynamic fields.
+2) Modify init to roll initiative, recieve VictoryRow size input
+3) create winCheck for field_size > 3
+4) add separate function for AI gameplay or modify the existing game()
+
+5) add fancy render for fields smaller than X (optional)
+6) add "crazyhouse" mutator (optional)
 */
 
 #include <iostream>
@@ -15,21 +26,20 @@ struct TTT_field
 {
     short int game_mode; // 0 - pvp, 1 - AI
     short int diff = 0;
-    short int field_size = 0;
+    short int field_size = 3;
     TTT fieldsmall[3][3] = { {EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY} };
     TTT fieldmedium[5][5] = { {EMTY,EMTY,EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY,EMTY,EMTY}, {EMTY,EMTY,EMTY,EMTY,EMTY}, {EMTY,EMTY,EMTY,EMTY,EMTY} };
     string p1 = ""; //Имена игроков
     string p2 = "";
-    char p1_ip[16] = "127.0.0.1"; //stub
-    char p2_ip[16] = "127.0.0.1"; //stub
     TTT p1_f; //Чем играет первый игрок?
     TTT p2_f;
+    short int VictoryRowSize = 3;
     int game_state = 0;
     string turn; //Чей ход
     string winner;
 };
 
-void game(TTT_field &game_data) //Основная игровая логика
+void game(TTT_field &game_data) //Основная игровая логика для PvP режима
 {
     std::cout << std::endl;
     std::cout << "Ход игрока " << game_data.turn << std::endl;
@@ -74,7 +84,7 @@ int main()
     init(game_data);
     do
     {
-        game_data.winner = "0"; //Подготовка к старту новой игры со старыми установками
+        game_data.winner = " "; //Подготовка к старту новой игры со старыми установками
         game_data.turn = game_data.p1;
         //очистка полей !!Переделать под динамические поля с очисткой памяти!!
         for (size_t i = 0; i < game_data.field_size; i++)
