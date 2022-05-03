@@ -13,6 +13,7 @@ enum TTT : char { X = 'X', O = 'O', EMTY = '·' };
 enum analysis_flag { VOID, NO_ROW, VICTORY_ROW, PRIORITY};
 
 //Main structure for keeping game data
+#pragma pack(push, 1)
 struct TTT_field
 {
     short int game_mode = 1; // 0 - pvp, 1 - AI
@@ -49,6 +50,7 @@ struct RowDataBuffer
     analysis_flag buff3_flag;
     analysis_flag buff4_flag;
 };
+#pragma pack(pop)
 
 //==================================================================================================
 //Small service functions

@@ -1,6 +1,6 @@
 ﻿/*
 =========================================================================================================
-Tic Tac Toe Game (v 1.0) by Tim Corso
+Tic Tac Toe Game (v 1.1) by Tim Corso
 The first real gaming piece in C++ for me (hopefully not the last)
 =========================================================================================================
  
@@ -17,6 +17,7 @@ using namespace std;
 enum TTT : char { X = 'X', O = 'O', EMTY = '·' };
 
 //Main structure for keeping game data
+#pragma pack(push, 1)
 struct TTT_field
 {
     short int game_mode = 1; // 0 - pvp, 1 - AI
@@ -40,6 +41,7 @@ struct coord
     short int flag = 0; //coords characteristics for calling functions
     short int EMTY_n = 0; //number of empty cells
 };
+#pragma pack(pop)
 
 //Game logic for making moves
 inline void game(TTT_field& game_data)
