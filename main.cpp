@@ -7,14 +7,13 @@ The first real gaming piece in C++ for me (hopefully not the last)
 
 /*
 toDo list:
-1) починить проверку победы
-2) Дополнительный флаг в coord - кол-во пустых ячеек в ходе переданном rowsCheck. 
-3) Сделать проверку в AI на выбор оптимального из ходов. Возможно нужен массив coord
-
-*) CODE CLEANUP!!!
+1) Добавитть очистку экрана между ходами
 
 
-*) add "crazyhouse" mutator (optional)
+- CODE CLEANUP!!!
+
+
+ - add "crazyhouse" mutator (optional)
 */
 
 #include <iostream>
@@ -47,6 +46,7 @@ struct coord
     size_t x = 0;
     size_t y = 0;
     short int flag = 0;
+    int EMTY_n = 0;
 };
 
 //Основная игровая логика
@@ -58,9 +58,9 @@ void game(TTT_field& game_data)
     //human player move
     if (game_data.game_mode == 0 || (game_data.game_mode == 1 && game_data.turn == game_data.p1)) 
     {
-        cout << "Ход игрока " << game_data.turn << endl;
         fieldPrint(game_data);
         cout << endl;
+        cout << "Ход игрока " << game_data.turn << endl;
         for (;;) //Ввод и проверка координат
         {
             std::cout << "Введите координаты для совершения хода (строка и столбик, через пробел или по очереди): ";
@@ -91,9 +91,9 @@ void game(TTT_field& game_data)
     //AI's move
     else if (game_data.game_mode == 1 && game_data.turn == game_data.p2) 
     {
-        cout << "Ход ИИ" << endl;
         fieldPrint(game_data);
         cout << endl;
+        cout << "Ход ИИ" << endl;
         AI_Proc(game_data);
     }  
 }
@@ -157,7 +157,7 @@ int main()
         }
         else if (game_data.game_state == 1) //или победителя
         {
-            if (game_data.game_mode = 1 && game_data.winner == game_data.p2)
+            if (game_data.game_mode == 1 && game_data.winner == game_data.p2)
                 std::cout << "Победил ИИ!" << std::endl;
             else
                 std::cout << "Победил игрок: " << game_data.winner << "!" << std::endl;

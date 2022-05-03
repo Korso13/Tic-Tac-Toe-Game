@@ -34,6 +34,7 @@ struct coord
     size_t x = 0;
     size_t y = 0;
     short int flag = 0;
+    int EMTY_n = 0;
 };
 
 struct RowDataBuffer
@@ -223,7 +224,7 @@ login:  //Точка входа если данные введены неправильно
                 cout << "Некорректный ввод!" << endl;
             }
         }
-        
+        cout << endl;
         for (;;) //victory requirements
         {
             cout << "Сколько нужно собрать Х/О в ряд для победы (не меньше трех, но не больше размера поля): ";
@@ -236,6 +237,7 @@ login:  //Точка входа если данные введены неправильно
                 cout << "Некорректный ввод!" << endl;
             }
         }  
+        cout << endl;
     }
 
     //Roll for initiative!!
@@ -363,30 +365,30 @@ void AI_Proc(TTT_field& game_data)
             for (size_t k = 0; k < game_data.field_size; k++)
                 if (game_data.field[i][k] == EMTY)
                 {
-                    if (game_data.diff == 2) //Normal. Chance to complete row 85%. Chance to react to threat 25% (75% if it completes own row). 
+                    if (game_data.diff == 2) //Normal. Chance to complete row 70%. Chance to react to threat 25% (80% if it completes own row). 
                     {
                         game_data.field[i][k] = game_data.p2_f; //AI figure placement
                         if (winCheck(game_data) == 1)
                         {
-                            if (RollRandom(0, 100) >= 15)
+                            game_data.field[i][k] = game_data.p1_f;
+                            ai_temp1 = winCheck(game_data);
+                            game_data.field[i][k] = game_data.p2_f;
+                            if (ai_temp1 == 1 && RollRandom(0, 100) >= 20) //80% chance to respond to player's threat and complete own row
                                 return;
-                            else //75% chance to respond to threat and complete own row
+                            else if (RollRandom(0, 100) >= 30) //general 70% chance to use victory option to complete row
                             {
-                                game_data.field[i][k] = game_data.p1_f;
-                                ai_temp1 = winCheck(game_data);
-                                game_data.field[i][k] = game_data.p2_f;
-                                    if (ai_temp1 == 1 && RollRandom(0, 100) >= 25)
-                                        return;
+                                return; 
                             }
                         }
                         else if (ai_temp1 == 1 && RollRandom(0, 100) >= 75) //25% chance to react to threat (but not complete own row) check
                             return;
                         else //nothing proc'ed
                         {
-                            break;
                             game_data.field[i][k] = EMTY;
+                            break;
                         }
                     } //End of bloc for normal difficulty
+
                     else if (game_data.diff >= 3)
                     {
                         game_data.field[i][k] = game_data.p2_f;
@@ -443,7 +445,7 @@ void AI_Proc(TTT_field& game_data)
     if (game_data.field_size == 3)
     {
         //Check if central cell in 3x3 field is empty
-        if ((game_data.diff == 3 || (game_data.diff == 2 && (RollRandom(0, 100) >= 50))) && game_data.field[1][1] == EMTY)
+        if ((game_data.diff == 3 && game_data.field[1][1] == EMTY) || (game_data.diff == 2 && (RollRandom(0, 100) >= 50) && game_data.field[1][1] == EMTY))
         {
             game_data.field[1][1] = game_data.p2_f;
             return;
@@ -565,25 +567,25 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
             switch(game_data.field[y][i])
             {
             case 'X':
-            {
                 if (game_data.p1_f == 'X')
                     rb.buff1[1]++;
                 else
                     rb.buff1[2]++;
-            }
+                break;
             case 'O':
-            {
                 if (game_data.p1_f == 'O')
                     rb.buff1[1]++;
                 else
                     rb.buff1[2]++;
-            }
-            case '·':
-            {
-                rb.buff1[0]++;
-                rb.buff1[3] = y; //if line is completable - will be used as next move coords for AI
-                rb.buff1[4] = i;
-            }
+                break;
+            default:
+                if (game_data.field[y][i] == EMTY)
+                {
+                    rb.buff1[0]++;
+                    rb.buff1[3] = y; //if line is completable - will be used as next move coords for AI
+                    rb.buff1[4] = i;
+                }
+                break;
             }
         }
     }
@@ -596,25 +598,25 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
             switch (game_data.field[i][x])
             {
             case 'X':
-            {
                 if (game_data.p1_f == 'X')
                     rb.buff2[1]++;
                 else
                     rb.buff2[2]++;
-            }
+                break;
             case 'O':
-            {
                 if (game_data.p1_f == 'O')
                     rb.buff2[1]++;
                 else
                     rb.buff2[2]++;
-            }
-            case '·':
-            {
-                rb.buff2[0]++;
-                rb.buff2[3] = i; //if row is completable - will be used as next move coords for AI
-                rb.buff2[4] = x;
-            }
+                break;
+            default:
+                if (game_data.field[y][i] == EMTY)
+                {
+                    rb.buff1[0]++;
+                    rb.buff1[3] = y; //if line is completable - will be used as next move coords for AI
+                    rb.buff1[4] = i;
+                }
+                break;
             }
         }
     }
@@ -628,25 +630,25 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
             switch (game_data.field[i][k++])
             {
             case 'X':
-            {
                 if (game_data.p1_f == 'X')
                     rb.buff3[1]++;
                 else
                     rb.buff3[2]++;
-            }
+                break;
             case 'O':
-            {
                 if (game_data.p1_f == 'O')
                     rb.buff3[1]++;
                 else
                     rb.buff3[2]++;
-            }
-            case '·':
-            {
-                rb.buff3[0]++;
-                rb.buff3[3] = i; //if row is completable - will be used as next move coords for AI
-                rb.buff3[4] = k;
-            }
+                break;
+            default:
+                if (game_data.field[y][i] == EMTY)
+                {
+                    rb.buff1[0]++;
+                    rb.buff1[3] = y; //if line is completable - will be used as next move coords for AI
+                    rb.buff1[4] = i;
+                }
+                break;
             }
         }
     }
@@ -660,25 +662,25 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
             switch (game_data.field[i][k--])
             {
             case 'X':
-            {
                 if (game_data.p1_f == 'X')
                     rb.buff4[1]++;
                 else
                     rb.buff4[2]++;
-            }
+                break;
             case 'O':
-            {
                 if (game_data.p1_f == 'O')
                     rb.buff4[1]++;
                 else
                     rb.buff4[2]++;
-            }
-            case '·':
-            {
-                rb.buff4[0]++;
-                rb.buff4[3] = i; //if row is completable - will be used as next move coords for AI
-                rb.buff4[4] = k;
-            }
+                break;
+            default:
+                if (game_data.field[y][i] == EMTY)
+                {
+                    rb.buff1[0]++;
+                    rb.buff1[3] = y; //if line is completable - will be used as next move coords for AI
+                    rb.buff1[4] = i;
+                }
+                break;
             }
         }
     }
@@ -741,7 +743,7 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
     
     //Find buffer with least buffX[0] (EMTY) - it will be closest row to complete. Rows with p1_f already excluded at this point
     //This code will always return from function!
-    if (game_data.game_mode == 1 && (game_data.turn == game_data.p2) && winCheck == false)//clause for AI turn only
+    if (game_data.game_mode == 1 && (game_data.turn == game_data.p2) && winCheck == false)//AI_Proc() call only
     { 
         short int min = game_data.VictoryRowSize; //variable to determine lowest amount of buffX[0]
         if ((rb.buff1_flag != NO_ROW) && rb.buff1[0] < min)
@@ -774,6 +776,7 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
             c.y = rb.buff1[3];
             c.x = rb.buff1[4];
             c.flag = 1;
+            c.EMTY_n = rb.buff1[0]; //Relay number of remaining cells to complete row and win
             return c;
         }
 
@@ -782,6 +785,7 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
             c.y = rb.buff2[3];
             c.x = rb.buff2[4];
             c.flag = 1;
+            c.EMTY_n = rb.buff2[0]; //Relay number of remaining cells to complete row and win
             return c;
         }
 
@@ -790,6 +794,7 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
             c.y = rb.buff3[3];
             c.x = rb.buff3[4];
             c.flag = 1;
+            c.EMTY_n = rb.buff3[0]; //Relay number of remaining cells to complete row and win
             return c;
         }
 
@@ -798,8 +803,9 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
             c.y = rb.buff4[3];
             c.x = rb.buff4[4];
             c.flag = 1;
+            c.EMTY_n = rb.buff4[0]; //Relay number of remaining cells to complete row and win
             return c;
-        }
+        } 
         return c = { 0,0,0 };
     }
     else if (winCheck == true)
