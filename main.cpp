@@ -1,74 +1,93 @@
 ﻿/*
 =========================================================================================================
-Tic Tac Toe Game by Tim Corso
-First real gaming piece in C++ for me (hopefully not the last)
+Tic Tac Toe Game (v 1.0) by Tim Corso
+The first real gaming piece in C++ for me (hopefully not the last)
 =========================================================================================================
+ 
+To do list:
+- add "crazyhouse" mutator (reshuffles field every N turns)
 */
 
 #include <iostream>
 #include <string>
 #include "add.h"
+
 using namespace std;
 
 enum TTT : char { X = 'X', O = 'O', EMTY = '·' };
+
+//Main structure for keeping game data
 struct TTT_field
 {
-    short int game_mode; // 0 - pvp, 1 - AI
+    short int game_mode = 1; // 0 - pvp, 1 - AI
     short int diff = 0;
-    short int field_size = 0;
-    TTT fieldsmall[3][3] = { {EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY} };
-    TTT fieldmedium[5][5] = { {EMTY,EMTY,EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY,EMTY,EMTY},{EMTY,EMTY,EMTY,EMTY,EMTY}, {EMTY,EMTY,EMTY,EMTY,EMTY}, {EMTY,EMTY,EMTY,EMTY,EMTY} };
-    string p1 = ""; //Имена игроков
+    short int field_size = 3;
+    TTT** field = nullptr;
+    string p1 = ""; //player names
     string p2 = "";
-    char p1_ip[16] = "127.0.0.1"; //stub
-    char p2_ip[16] = "127.0.0.1"; //stub
-    TTT p1_f; //Чем играет первый игрок?
-    TTT p2_f;
+    TTT p1_f = X; //player figures
+    TTT p2_f = O;
+    short int VictoryRowSize = 3;
     int game_state = 0;
-    string turn; //Чей ход
+    string turn; //whose turn is it?
     string winner;
 };
 
-void AI_Proc(TTT_field game_data) //Обсчёт логики ИИ (?)
+struct coord
 {
-}
+    size_t x = 0;
+    size_t y = 0;
+    short int flag = 0; //coords characteristics for calling functions
+    short int EMTY_n = 0; //number of empty cells
+};
 
-void game(TTT_field &game_data) //Основная игровая логика
+//Game logic for making moves
+inline void game(TTT_field& game_data)
 {
-    std::cout << std::endl;
-    std::cout << "Ход игрока " << game_data.turn << std::endl;
-    fieldPrint(game_data);
-    size_t x{ 0 }, y{ 0 };
-    for (;;) //Ввод и проверка координат
+    coord pl;
+
+    //human player move
+    if (game_data.game_mode == 0 || (game_data.game_mode == 1 && game_data.turn == game_data.p1)) 
     {
-        std::cout << "Введите координаты для совершения хода (строка и столбик, через пробел или по очереди): ";
-        std::cin >> x;
-        cinCheck();
-        std::cin >> y;
-        cinCheck();
-
-        x--; //корректировка координат под индекс массива
-        y--;
-        if (game_data.fieldsmall[x][y] != EMTY) //need branch for bigger fields
-            std::cout << "Ячейка занята! Выберите другую!" << std::endl;
-        else
+        clear();
+        fieldPrint(game_data);
+        cout << endl;
+        cout << "Ход игрока " << game_data.turn << " (" << ((game_data.turn == game_data.p1) ? game_data.p1_f : game_data.p2_f) << ")" << endl;
+        for (;;) //coordinates input and check
         {
-            if ((x >= 0 && x < game_data.field_size) && (y >= 0 && y < game_data.field_size)) //проверка корректности координат
-            {
-                break;
-            }
+            cout << "Введите координаты для совершения хода (строка и столбик, через пробел или по очереди): ";
+            cin >> pl.y;
+            cinCheck();
+            cin >> pl.x;
+            cinCheck();
+
+            pl.y--; //adapt coords for field indices
+            pl.x--;
+            if (game_data.field[pl.y][pl.x] != EMTY) //need branch for bigger fields
+                cout << "Ячейка занята! Выберите другую!" << endl;
             else
             {
-                std::cout << "Неправильный ввод!" << std::endl;
-                continue;
+                if ((pl.y >= 0 && pl.y < game_data.field_size) && (pl.x >= 0 && pl.x < game_data.field_size)) //check if coords are ok
+                {
+                    break;
+                }
+                else
+                {
+                    cout << "Неправильный ввод!" << endl;
+                    continue;
+                }
             }
         }
+        game_data.field[pl.y][pl.x] = (game_data.turn == game_data.p1) ? game_data.p1_f : game_data.p2_f;
     }
-
-    if (game_data.field_size == 3) 
-        game_data.fieldsmall[x][y] = (game_data.turn == game_data.p1) ? game_data.p1_f : game_data.p2_f;
-    else //stub for field size 5. Ignore for now
-        game_data.fieldmedium[x][y] = (game_data.turn == game_data.p1) ? game_data.p1_f : game_data.p2_f;
+    //AI's move
+    else if (game_data.game_mode == 1 && game_data.turn == game_data.p2) 
+    {
+        fieldPrint(game_data);
+        cout << endl;
+        cout << "Ход ИИ" << endl;
+        AI_Proc(game_data);
+    }  
 }
 
 int main()
@@ -76,76 +95,70 @@ int main()
     setlocale(LC_ALL, "Russian");
     TTT_field game_data;
     init(game_data);
-    restart:
-    game_data.winner = "0"; //Подготовка к старту новой игры со старыми установками
-    game_data.turn = game_data.p1;
-    //очистка полей
-    for (size_t i = 0; i < game_data.field_size; i++)
-    {
-        for (size_t k = 0; k < game_data.field_size; k++)
-        { 
-            game_data.fieldsmall[i][k] = EMTY;
-            game_data.fieldmedium[i][k] = EMTY;
-        }
-    }
-
     do
     {
-        game(game_data);
-        game_data.game_state = winCheck(game_data);
-        if (game_data.game_state == 2) //проверка на ничью
+        game_data.winner = " "; //reset winner in case of rematch
+        rollInitiative(game_data);
+
+        //cleaning or initializing game field
         {
-            break;
-        }
-        else
-        {
-            if (game_data.game_state == 0) //Проверка - привёл ли очередной ход к победе
+            if (game_data.field == nullptr)
             {
-                if (game_data.turn == game_data.p1) //Передача хода другому игроку
-                    game_data.turn = game_data.p2;
-                else
-                    game_data.turn = game_data.p1;
+                fieldInit(game_data);
             }
-            else if(game_data.game_state == 1)
-                game_data.winner = game_data.turn; //В случае выигрыша - передаём имя победителя; заканчиваем цикл
+            else
+            {
+                for (size_t i = 0; i < game_data.field_size; i++)
+                {
+                    delete[] game_data.field[i];
+                }
+                delete[] game_data.field;
+                game_data.field = nullptr;
+                fieldInit(game_data);
+            }
         }
-    } while (game_data.game_state == 0);
-    fieldPrint(game_data);
-    if (game_data.game_state == 2) //Объявление ничей или победителя
-    {
-        std::cout << "Ничья!" << std::endl;
-    }
-    else if (game_data.game_state == 1)
-        std::cout << "Победил игрок: " << game_data.winner << "!" << std::endl;
 
-    char y_n = 0;
-    for (;;)
-    {
-        cout << "Реванш (Y/N)? ";
-        cin >> y_n;
-        if (y_n == 'Y' || y_n == 'y' || y_n == 'У' || y_n == 'у')
+        //main game loop
+        do
         {
-            cout << endl;
-            goto restart;
-                
+            game(game_data); //player or AI makes move
+            game_data.game_state = winCheck(game_data);
+            if (game_data.game_state == 2) //draws checks
+            {
+                break;
+            }
+            else
+            {
+                if (game_data.game_state == 0) //Victory checks
+                {
+                    if (game_data.turn == game_data.p1) //players take turns
+                        game_data.turn = game_data.p2;
+                    else
+                        game_data.turn = game_data.p1;
+                }
+                else if (game_data.game_state == 1)
+                    game_data.winner = game_data.turn; //relay winner name if one is achieved
+            }
+        } while (game_data.game_state == 0);
 
-        }
-        else if (y_n == 'N' || y_n == 'n' || y_n == 'Н' || y_n == 'н')
+        clear();
+        fieldPrint(game_data);
+        if (game_data.game_state == 2) //draw declaration
         {
+            cout << "Ничья!" << endl;
             cout << endl;
-            break;
+            fieldPrint(game_data);
         }
-    }
-    
-    //Debugging
-    cout << "game_mode " << game_data.game_mode << endl;
-    cout << "difficulty " << game_data.diff << endl;
-    cout << "field_size " << game_data.field_size << endl;
-    cout << "p1 name " << game_data.p1 << endl;
-    cout << "p2 name " << game_data.p2 << endl;
-    cout << "p1 figure " << game_data.p1_f << endl;
-    cout << "p2 figure " << game_data.p2_f << endl;
-
-    fieldPrint(game_data);
+        else if (game_data.game_state == 1) //winner declaration
+        {
+            if (game_data.game_mode == 1 && game_data.winner == game_data.p2)
+                cout << "Победил ИИ!" << endl;
+            else
+                cout << "Победил игрок: " << game_data.winner << "!" << endl;
+            cout << endl;
+            fieldPrint(game_data);
+        }
+    } while (ReMatch() != 1);//Offer a rematch with same conditions. 1 turn player is rerolled
+   
     return 0;
 }

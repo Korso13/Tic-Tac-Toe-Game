@@ -4,5 +4,13 @@
 *.sln
 .gitignore
 .vs/
-x64/
+x64/Debug
+x64/Release/Tic_Tac_Toe.tlog
+x64/Release/Tic_Tac_Toe.vcxproj.FileListAbsolute.txt
 debug/
+*.obj
+*.recipe
+*.iobj
+*.ipdb
+*.log
+*.pdb
