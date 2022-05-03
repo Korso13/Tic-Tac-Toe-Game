@@ -19,13 +19,13 @@ struct TTT_field
     short int diff = 0;
     short int field_size = 3;
     TTT** field = nullptr;
-    string p1 = ""; //Имена игроков
+    string p1 = ""; //player names
     string p2 = "";
-    TTT p1_f = X; //Чем играет первый игрок?
+    TTT p1_f = X; //player figures
     TTT p2_f = O;
     short int VictoryRowSize = 3;
     int game_state = 0;
-    string turn; //Чей ход
+    string turn; //whose turn is it?
     string winner;
 };
 
@@ -33,10 +33,11 @@ struct coord
 {
     size_t x = 0;
     size_t y = 0;
-    short int flag = 0;
-    int EMTY_n = 0;
+    short int flag = 0; //coords characteristics for calling functions
+    short int EMTY_n = 0; //number of empty cells
 };
 
+//structure for analysing possible moves from given coordinates using rowsCheck()
 struct RowDataBuffer
 {
     short int buff1[5]{ 0 }; 
@@ -53,7 +54,7 @@ struct RowDataBuffer
 //Small service functions
 //==================================================================================================
 
-void cinCheck() //проверка ввода общая
+inline void cinCheck() //check input
 {
     if (cin.fail())
     {
@@ -63,12 +64,12 @@ void cinCheck() //проверка ввода общая
 }
 
 //clear screen
-void clear() // функция очистки экрана
+void clear()
 {
     cout << "\x1B[2J\x1B[H"; 
 }
 
-int32_t RollRandom(int32_t min, int32_t max) //Генератор случайных чисел от мин до макс
+inline int32_t RollRandom(int32_t min, int32_t max) //random number dispenser
 {
     const static auto seed = chrono::system_clock::now().time_since_epoch().count();
     static mt19937_64 generator(seed);
@@ -77,7 +78,7 @@ int32_t RollRandom(int32_t min, int32_t max) //Генератор случайных чисел от мин 
 }
 
 //Get random coordinates
-coord getRandomCoord(short int f_size)
+inline coord getRandomCoord(short int f_size)
 {
     coord c;
     c.x = RollRandom(0, (f_size - 1));
@@ -86,7 +87,7 @@ coord getRandomCoord(short int f_size)
 }
 
 //Roll for initiative!!
-void rollInitiative(TTT_field& game_data)
+inline void rollInitiative(TTT_field& game_data)
 {
     if (RollRandom(0, 100) >= 50)
         game_data.turn = game_data.p2;
@@ -100,13 +101,13 @@ void rollInitiative(TTT_field& game_data)
 
 void init(TTT_field& game_data)
 {
-    // TTT_field game_data - Основной блок данных игры. Заполняем то что нужно на старте.
+    // TTT_field game_data - main block containing info for launching game
     cout << "Добро пожаловать в игру 'крестики-нолики'!" << endl;
     string gm; //Temp variable to interpret user input
 
-login:  //Точка входа если данные введены неправильно
+login:  //goto point if user wants to change settings
     game_data.game_mode = 2;
-    //Режим игры
+    //game mode
     while (game_data.game_mode < 0 || game_data.game_mode > 1)
     {
         cout << "Выберите режим игры: PvP (игрок против игрока) или AI (против компьютера): ";
@@ -121,10 +122,10 @@ login:  //Точка входа если данные введены неправильно
     }
     cout << endl;
 
-    //Настройка ИИ
+    //AI settings input
     if (game_data.game_mode == 1)
     {
-        game_data.diff = 0;  //Защита от проскальзывания при перезапуске init
+        game_data.diff = 0;  //redundancy in case init() relaunhced via GOTO
         while (game_data.diff < 1 || game_data.diff > 4)
         {
             cout << "Выберите сложность. 1 - простая, 2 - средняя, 3 - сложная, 4 - Hurt Me Plenty (на кастомных полях и условиях): ";
@@ -133,12 +134,12 @@ login:  //Точка входа если данные введены неправильно
             cout << endl;
         }
 
-        game_data.p1 = ""; //защита на случай перезапуска init
-        cout << "Введите имя игрока: "; //Настройка игрока против ИИ с проверкой корректности
+        game_data.p1 = ""; //redundancy in case init() relaunhced via GOTO
+        cout << "Введите имя игрока: "; //player name input
         cin >> game_data.p1;
         cinCheck();
         game_data.p2 = "ИИ";
-        char temp1 = 0; //защита на случай перезапуска init
+        char temp1 = 0; //redundancy in case init() relaunhced via GOTO
         do
         {
             cout << "\nЧем играет игрок(X/O)? ";
@@ -150,7 +151,7 @@ login:  //Точка входа если данные введены неправильно
                 game_data.p2_f = O;
                 break;
             }
-            else if (temp1 == 'O' || temp1 == 'О' || temp1 == 'o' || temp1 == 'о')
+            else if (temp1 == 'O' || temp1 == 'О' || temp1 == 'o' || temp1 == 'о' || temp1 == '0')
             {
                 game_data.p1_f = O;
                 game_data.p2_f = X;
@@ -161,14 +162,14 @@ login:  //Точка входа если данные введены неправильно
                 cerr << "Неверный формат!" << endl;
                 temp1 = 1;
             }
-        } while (temp1 == 1); //конец настройки имени игрока против ИИ
-    } //конец настройки сложности ИИ
+        } while (temp1 == 1); 
+    } //end of AI settings
 
-//Настройка игроков (pvp mode)
+//pvp mode settings
     else if (game_data.game_mode == 0)
     {
         char temp2;
-        game_data.p1 = ""; //Защита на случай перезапуска init
+        game_data.p1 = ""; //redundancy in case init() relaunhced via GOTO
         cout << "Введите имя первого игрока: ";
         cin >> game_data.p1;
         cinCheck();
@@ -189,6 +190,7 @@ login:  //Точка входа если данные введены неправильно
         case 'o':
         case 'о':
         case 'О':
+        case '0':
             game_data.p1_f = O;
             break;
         default:
@@ -198,21 +200,21 @@ login:  //Точка входа если данные введены неправильно
         }
         }
         cout << endl;
-        game_data.p2 = ""; //Защита на случай перезапуска init
+        game_data.p2 = ""; //redundancy in case init() relaunhced via GOTO
         cout << "Введите имя второго игрока: ";
         cin >> game_data.p2;
         cinCheck();
         if (game_data.p1_f == X)
             game_data.p2_f = O;
         else game_data.p2_f = X;
-    }//конец ввода данных об игроках
+    }
     cout << endl;
 
     
     //Setting up game field size and victory requirements
     if ((game_data.game_mode == 1 && game_data.diff == 4) || game_data.game_mode == 0)
     {
-        for (;;) //game field size
+        for (;;) //game field size imput
         {
             cout << "Выберите размер игрового поля (от 3 и больше): ";
             cin >> game_data.field_size;
@@ -225,7 +227,7 @@ login:  //Точка входа если данные введены неправильно
             }
         }
         cout << endl;
-        for (;;) //victory requirements
+        for (;;) //victory requirements input
         {
             cout << "Сколько нужно собрать Х/О в ряд для победы (не меньше трех, но не больше размера поля): ";
             cin >> game_data.VictoryRowSize;
@@ -243,7 +245,7 @@ login:  //Точка входа если данные введены неправильно
     //Roll for initiative!!
     rollInitiative(game_data);
 
-    //Последние приготовления
+    //ask if user entered everything correctly
     char y_n = 0;
     for (;;)
     {
@@ -285,7 +287,7 @@ void fieldInit(TTT_field& game_data)
 }
 
 //=================================================================================================
-//Печать игрового поля
+//Game field printing function
 //=================================================================================================
 
 void fieldPrint(TTT_field& game_data)
@@ -305,7 +307,9 @@ void fieldPrint(TTT_field& game_data)
         }
         cout << endl;
 
-        cout << (i + 1) << " ";  //print y coords
+        cout << (i + 1); //print y coords
+        if (i <= 8) 
+            cout << " ";
         for (int k = 0; k < game_data.field_size; k++) //print i line
         {
             cout << "| " << game_data.field[i][k] << " ";
@@ -504,25 +508,33 @@ void AI_Proc(TTT_field& game_data)
   //Mittelspiel AI scripts (one figure in potential row), begining script for field_size >3 and backup move script. Always return!    
     if (game_data.diff > 1)
     {
+        short int min{game_data.VictoryRowSize}; //service value to find best move
         coord ai_c;
-        for (int y = 0; y < game_data.field_size; y++)
-        {
-            for (int x = 0; x < game_data.field_size; x++)
+        coord best_ai_c {0, 0, 0, min};
+            for (int y = 0; y < game_data.field_size; y++)
             {
-                if (game_data.field[y][x] == game_data.p2_f || game_data.field[y][x] == EMTY) //if AI figure, check if there are any good moves using this cell
+                for (int x = 0; x < game_data.field_size; x++)
                 {
-                    ai_c = rowsCheck(game_data, y, x);
-                    if (ai_c.flag == 1) //(0 - good moves found, 1 - good move found)
+                    if (game_data.field[y][x] == game_data.p2_f || game_data.field[y][x] == EMTY) //if AI figure, check if there are any good moves using this cell
                     {
-                        if (game_data.field[ai_c.y][ai_c.x] == EMTY)
+                        ai_c = rowsCheck(game_data, y, x);
+                        if (ai_c.flag == 1) //(0 - good moves found, 1 - good move found)
                         {
-                            game_data.field[ai_c.y][ai_c.x] = game_data.p2_f;
-                            return;
+                            if (ai_c.EMTY_n < best_ai_c.EMTY_n)
+                            {
+                                best_ai_c = ai_c; //record best move so far
+                            }
                         }
                     }
                 }
             }
-        }
+            //After we analysed all possible moves and determined one with least EMTY_n (best_ai_c) we apply it:
+
+            if ((game_data.field[best_ai_c.y][best_ai_c.x] == EMTY) && (best_ai_c.EMTY_n != game_data.VictoryRowSize))
+            {
+                game_data.field[best_ai_c.y][best_ai_c.x] = game_data.p2_f;
+                return;
+            }
     }
     
     //backup scenario - works when no optimal moves found or in begining of the game on fields > 3
@@ -551,7 +563,7 @@ void AI_Proc(TTT_field& game_data)
 
 coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
 {
-    coord c;
+    coord c{0,0,VOID, game_data.VictoryRowSize};
     //Buffers for scan results. 0 index - EMTY cells, 1st - 1p_f cells, 2nd - 2p_f cells, 
     //3rd - 'y' of best move, 4th - 'x' of best move 
     RowDataBuffer rb;
@@ -610,11 +622,11 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
                     rb.buff2[2]++;
                 break;
             default:
-                if (game_data.field[y][i] == EMTY)
+                if (game_data.field[i][x] == EMTY)
                 {
-                    rb.buff1[0]++;
-                    rb.buff1[3] = y; //if line is completable - will be used as next move coords for AI
-                    rb.buff1[4] = i;
+                    rb.buff2[0]++;
+                    rb.buff2[3] = i; //if line is completable - will be used as next move coords for AI
+                    rb.buff2[4] = x;
                 }
                 break;
             }
@@ -625,9 +637,9 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
     if (((y + game_data.VictoryRowSize) <= game_data.field_size) && ((x + game_data.VictoryRowSize) <= game_data.field_size)) //don't check if cells nessesary for victory exceed game field's limits
     {
         k = x; //variable for simultaneous double loops!
-        for (int i = (y); i < (y + game_data.VictoryRowSize); i++) //loop limited by victoryRowSize
+        for (int i = y; i < (y + game_data.VictoryRowSize); i++) //loop limited by victoryRowSize
         {
-            switch (game_data.field[i][k++])
+            switch (game_data.field[i][k])
             {
             case 'X':
                 if (game_data.p1_f == 'X')
@@ -642,14 +654,15 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
                     rb.buff3[2]++;
                 break;
             default:
-                if (game_data.field[y][i] == EMTY)
+                if (game_data.field[i][k] == EMTY)
                 {
-                    rb.buff1[0]++;
-                    rb.buff1[3] = y; //if line is completable - will be used as next move coords for AI
-                    rb.buff1[4] = i;
+                    rb.buff3[0]++;
+                    rb.buff3[3] = i; //if line is completable - will be used as next move coords for AI
+                    rb.buff3[4] = k;
                 }
                 break;
             }
+            k++;
         }
     }
 
@@ -659,7 +672,7 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
         k = x;
         for (int i = y; i < (y + game_data.VictoryRowSize); i++) //loop limited by victoryRowSize
         {
-            switch (game_data.field[i][k--])
+            switch (game_data.field[i][k])
             {
             case 'X':
                 if (game_data.p1_f == 'X')
@@ -674,14 +687,15 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
                     rb.buff4[2]++;
                 break;
             default:
-                if (game_data.field[y][i] == EMTY)
+                if (game_data.field[i][k] == EMTY)
                 {
-                    rb.buff1[0]++;
-                    rb.buff1[3] = y; //if line is completable - will be used as next move coords for AI
-                    rb.buff1[4] = i;
+                    rb.buff4[0]++;
+                    rb.buff4[3] = i; //if line is completable - will be used as next move coords for AI
+                    rb.buff4[4] = k;
                 }
                 break;
             }
+            k--;
         }
     }
 
@@ -806,7 +820,7 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
             c.EMTY_n = rb.buff4[0]; //Relay number of remaining cells to complete row and win
             return c;
         } 
-        return c = { 0,0,0 };
+        return c = { 0,0,NO_ROW, game_data.VictoryRowSize };
     }
     else if (winCheck == true)
     {
@@ -818,7 +832,7 @@ coord rowsCheck(TTT_field& game_data, int y, int x, bool winCheck)
 //======================================================================================================================
 //Rematch function
 //======================================================================================================================
-int ReMatch() //0 - рестарт, 1 - завершение
+int ReMatch() //0 - restart game, 1 - end game
 {
     char y_n = 0;
     for ( ; ; )
@@ -828,12 +842,12 @@ int ReMatch() //0 - рестарт, 1 - завершение
         if (y_n == 'Y' || y_n == 'y' || y_n == 'У' || y_n == 'у')
         {
             cout << endl;
-            return 0; //рестарт игры
+            return 0; //restart game
         }
         else if (y_n == 'N' || y_n == 'n' || y_n == 'Н' || y_n == 'н')
         {
             cout << endl;
-            return 1; //завершение игры
+            return 1; //end game
         }
     }
     return 1;
